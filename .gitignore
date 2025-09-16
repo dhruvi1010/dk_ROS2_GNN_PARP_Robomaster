@@ -48,3 +48,4 @@ rosbag2*
 *.swo
 
 # If you DO want any of the above, remove the pattern later.
+.bashrc
