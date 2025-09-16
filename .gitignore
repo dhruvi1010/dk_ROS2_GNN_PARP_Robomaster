@@ -1,0 +1,50 @@
+# ROS2 / colcon
+build/
+install/
+log/
+
+# Isaac / misc
+gnn_logs/
+.colcon/
+.ros/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+venv/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Datasets, logs, and heavy exports
+*.csv
+*.db3
+*.bag
+*.bag.active
+*.bag2
+rosbag2*
+*.pth
+*.pt
+*.pkl
+*.npz
+*.npy
+*.onnx
+
+# Images and maps (keep maps YAML, ignore big binaries by default)
+*.png
+*.jpg
+*.jpeg
+*.pgm
+
+# Lock/temp
+.~lock.*
+*.swp
+*.swo
+
+# If you DO want any of the above, remove the pattern later.
