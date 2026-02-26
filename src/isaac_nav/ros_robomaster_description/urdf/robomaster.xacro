@@ -1,0 +1,112 @@
+<?xml version="1.0"?>
+<robot name="robomaster" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Inclube Functions for the wheels  and Calcuations-->
+
+  <xacro:include filename="$(find ros_robomaster_description)/urdf/functions/interias.xacro" />
+
+  <!-- Colors -->
+  <material name="Black">
+    <color rgba="0.0 0.0 0.0 1.0" />
+  </material>
+
+  <material name="Red">
+    <color rgba="0.8 0.0 0.0 1.0" />
+  </material>
+
+  <material name="White">
+    <color rgba="1.0 1.0 1.0 1.0" />
+  </material>
+
+  <material name="Blue">
+    <color rgba="0.0 0.0 0.8 1.0" />
+  </material>
+  <!-- Colors -->
+
+  <!--All
+  units in m-kg-s-radians unit system -->
+  <xacro:property name="M_PI" value="3.1415926535897931" />
+  <xacro:property name="M_PI_2" value="1.570796327" />
+  <xacro:property name="M_PI_4" value="0.78539816339" />
+  <xacro:property name="DEG_TO_RAD" value="0.017453293" />
+
+  <!-- position of the base_footprint and base_link -->
+  <xacro:property name="base_footprint_position_x" value="0.0" /> <!-- in m -->
+  <xacro:property name="base_footprint_position_y" value="0.0" /> <!-- in m -->
+  <xacro:property name="base_footprint_position_z" value="0.0" /> <!-- in m -->
+  <xacro:property name="base_footprint_orientation_r" value="0.0" /> <!-- in rad -->
+  <xacro:property name="base_footprint_orientation_p" value="0.0" /> <!-- in rad -->
+  <xacro:property name="base_footprint_orientation_y" value="0.0" /> <!-- in rad -->  <!-- Rotation around z Axis   -->
+  <xacro:property name="base_link_footprint_z_offset" value="0.106624" /> <!-- in m, offset of base link to footprint in z direction -->
+
+  <!-- position of the front left mecanum wheel relative to baselink -->
+  <xacro:property name="wheel_fl_position_x" value="0.1" /> <!-- in m   -->
+  <xacro:property name="wheel_fl_position_y" value="0.1" /> <!-- in m   -->
+  <xacro:property name="wheel_fl_position_z" value="-0.056624" /> <!-- in m   -->
+  <xacro:property name="wheel_fl_orientation_r" value="0" /> <!-- in rad   -->
+  <xacro:property name="wheel_fl_orientation_p" value="0" /> <!-- in rad  -->
+  <xacro:property name="wheel_fl_orientation_y" value="0" /> <!-- in rad   -->  <!-- Rotation around z Axis   -->
+
+  <!-- position of the front right mecanum wheel relative to baselink -->
+  <xacro:property name="wheel_fr_position_x" value="0.1" /> <!-- in m   -->
+  <xacro:property name="wheel_fr_position_y" value="-0.1" /> <!-- in m   -->
+  <xacro:property name="wheel_fr_position_z" value="-0.056624" /> <!-- in m   -->
+  <xacro:property name="wheel_fr_orientation_r" value="0" /> <!-- in rad   -->
+  <xacro:property name="wheel_fr_orientation_p" value="0" /> <!-- in rad  -->
+  <xacro:property name="wheel_fr_orientation_y" value="0" /> <!-- in rad   -->  <!-- Rotation around z Axis   -->
+
+  <!-- position of the rear right mecanum wheel relative to baselink -->
+  <xacro:property name="wheel_rr_position_x" value="-0.1" /> <!-- in m   -->
+  <xacro:property name="wheel_rr_position_y" value="-0.1" /> <!-- in m   -->
+  <xacro:property name="wheel_rr_position_z" value="-0.056624" /> <!-- in m   -->
+  <xacro:property name="wheel_rr_orientation_r" value="0" /> <!-- in rad   -->
+  <xacro:property name="wheel_rr_orientation_p" value="0" /> <!-- in rad  -->
+  <xacro:property name="wheel_rr_orientation_y" value="0" /> <!-- in rad   -->  <!-- Rotation around z Axis   -->
+
+  <!-- position of the rear left mecanum wheel relative to baselink -->
+  <xacro:property name="wheel_rl_position_x" value="-0.1" /> <!-- in m   -->
+  <xacro:property name="wheel_rl_position_y" value="0.1" /> <!-- in m   -->
+  <xacro:property name="wheel_rl_position_z" value="-0.056624" /> <!-- in m   -->
+  <xacro:property name="wheel_rl_orientation_r" value="0" /> <!-- in rad   -->
+  <xacro:property name="wheel_rl_orientation_p" value="0" /> <!-- in rad  -->
+  <xacro:property name="wheel_rl_orientation_y" value="0.0" /> <!-- in rad   -->  <!-- Rotation around z Axis   -->
+
+
+  <!-- position of the wave sensor relative to baselink,  -->
+  <xacro:property name="wave_position_x" value="0.0832" /> <!-- in m   -->
+  <xacro:property name="wave_position_y" value="0.0" /> <!-- in m   -->
+  <xacro:property name="wave_position_z" value="0.1346" /> <!-- in m   -->
+  <xacro:property name="wave_orientation_r" value="0" /> <!-- in rad   -->
+  <xacro:property name="wave_orientation_p" value="0" /> <!-- in rad  -->
+  <xacro:property name="wave_orientation_y" value="0" /> <!-- in rad   -->  <!-- Rotation around z Axis   -->
+
+  <!-- Dimensions of the parts -->
+
+  <!-- Dimension mecanum_wheel for collision box -->
+  <xacro:property name="mecanum_wheel_radius" value="0.05" /> <!-- in m   -->
+  <xacro:property name="mecanum_wheel_height" value="0.045" /> <!-- in m   -->
+
+  <!-- wave sensor -->
+  <xacro:property name="WAVE_sensor_dimension_x" value="0.10" />
+  <xacro:property name="WAVE_sensor_dimension_y" value="0.03" />
+  <xacro:property name="WAVE_sensor_dimension_z" value="0.01" />
+
+  <!-- position of the Camera relative to baselink,  -->
+  <xacro:property name="camera_position_x" value="0.0832" /> <!-- in m   -->
+  <xacro:property name="camera_position_y" value="0.02" /> <!-- in m   -->
+  <xacro:property name="camera_position_z" value="0.1346" /> <!-- in m   -->
+  <xacro:property name="camera_orientation_r" value="0" /> <!-- in rad   -->
+  <xacro:property name="camera_orientation_p" value="0" /> <!-- in rad  -->
+  <xacro:property name="camera_orientation_y" value="0" /> <!-- in rad   -->  <!-- Rotation around z Axis   -->
+  <!-- Camera -->
+  <xacro:property name="CAMERA_dimension_x" value="0.30" />
+  <xacro:property name="CAMERA_dimension_y" value="0.03" />
+  <xacro:property name="CAMERA_dimension_z" value="0.01" />
+
+
+  <!-- Include Robomaster parts -->
+  <xacro:include filename="$(find ros_robomaster_description)/urdf/parts/parts.xacro" />
+
+
+
+</robot>

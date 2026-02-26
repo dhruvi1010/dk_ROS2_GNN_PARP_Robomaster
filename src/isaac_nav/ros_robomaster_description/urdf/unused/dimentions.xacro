@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<robot name="robomaster" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  
+  <!-- Dimension BMI088 -->
+  <xacro:property name="IMU_BMI088_dimension_x" value="0.0034" />
+  <xacro:property name="IMU_BMI088_dimension_y" value="0.0051" />
+  <xacro:property name="IMU_BMI088_dimension_z" value="0.001" />
+
+  <!-- Dimension Raspberry Pi Wide Angle Camera -->
+  <xacro:property name="PiCamWideAngle_dimension_x" value="0.001" />
+  <xacro:property name="PiCamWideAngle_dimension_y" value="0.020" />
+  <xacro:property name="PiCamWideAngle_dimension_z" value="0.024" />
+
+</robot>

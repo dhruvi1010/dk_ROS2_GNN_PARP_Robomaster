@@ -1,0 +1,134 @@
+<?xml version="1.0"?>
+<robot name="robomaster" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find ros_robomaster_description)/urdf/functions/interias.xacro" />
+
+  <!-- Basefootprint is the Center of the Robot projected onto ground-->
+  <link name="base_footprint">
+    <gravity>false</gravity>
+    <inertial>
+      <mass value="0.1" />
+      <origin xyz="0 0 0" />
+      <inertia ixx="0.0001" ixy="0.0" ixz="0.0"
+        iyy="0.0001" iyz="0.0"
+        izz="0.0001" />
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="file://$(find ros_robomaster_description)/urdf/meshes/base/Base.dae"
+          scale="1 1 1 " />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="${base_footprint_position_x} ${base_footprint_position_y} ${base_footprint_position_z}"
+        rpy="${base_footprint_orientation_r} ${base_footprint_orientation_p} ${base_footprint_orientation_y}" />
+      <geometry>
+        <box size="0.2 0.2 0.01" /> <!--ToDo check collision box size -->
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="base_link">
+    <!-- Defaul Interia of 1kg-->
+    <xacro:default_inertial mass="1" />
+    <!-- <visual>
+      <geometry>
+        <mesh filename="file://$(find ros_robomaster_description)/urdf/meshes/base/Base.dae"
+          scale="1 1 1 " />
+      </geometry>
+    </visual> -->
+  </link>
+  <joint name="base_link_joint" type="fixed">
+    <parent link="base_footprint" />
+    <child link="base_link" />
+    <origin xyz="${base_footprint_position_x} ${base_footprint_position_y} ${base_footprint_position_z + base_link_footprint_z_offset}"
+      rpy="${base_footprint_orientation_r} ${base_footprint_orientation_p} ${base_footprint_orientation_y}" />
+  </joint>
+  <gazebo reference="base_footprint">
+    <turnGravityoff>false</turnGravityoff>
+  </gazebo>
+
+  <link name="wheel_rr_link">
+    <!-- Defaul Interia of 200g-->
+    <xacro:default_inertial mass="0.200" />
+    <collision>
+      <geometry>
+        <cylinder length="${mecanum_wheel_height}" radius="${mecanum_wheel_radius}" />
+      </geometry>
+      <origin rpy="${M_PI_2} 0 0" xyz="0 0 0" />
+    </collision>
+    <visual>
+      <geometry>
+        <mesh
+          filename="file://$(find ros_robomaster_description)/urdf/meshes/wheels/Mecanum_Wheel.dae"
+          scale="1 1 1 " />
+      </geometry>
+    </visual>
+  </link>
+  <joint name="wheel_rr_joint" type="continuous">
+    <parent link="base_link" />
+    <child link="wheel_rr_link" />
+    <axis xyz="0 1 0" />
+    <origin xyz="${wheel_rr_position_x} ${wheel_rr_position_y} ${wheel_rr_position_z}"
+      rpy="${wheel_rr_orientation_r} ${wheel_rr_orientation_p} ${wheel_rr_orientation_y}" />
+  </joint>
+
+  <link name="wheel_rl_link">
+    <!-- Defaul Interia of 200g-->
+    <xacro:default_inertial mass="0.200" />
+    <collision>
+      <geometry>
+        <cylinder length="${mecanum_wheel_height}" radius="${mecanum_wheel_radius}" />
+      </geometry>
+      <origin rpy="${M_PI_2} 0 0" xyz="0 0 0" />
+    </collision>
+    <visual>
+      <geometry>
+        <mesh
+          filename="file://$(find ros_robomaster_description)/urdf/meshes/wheels/Mecanum_Wheel.dae"
+          scale="1 1 1 " />
+      </geometry>
+    </visual>
+  </link>
+  <joint name="wheel_rl_joint" type="continuous">
+    <parent link="base_link" />
+    <child link="wheel_rl_link" />
+    <axis xyz="0 1 0" />
+    <origin xyz="${wheel_rl_position_x} ${wheel_rl_position_y} ${wheel_rl_position_z}"
+      rpy="${wheel_rl_orientation_r} ${wheel_rl_orientation_p} ${wheel_rl_orientation_y}" />
+  </joint>
+
+
+<!-- Wave sensor -->
+  <link name="wave_sensor_link">
+    <visual>
+      <geometry>
+        <box
+          size="${WAVE_sensor_dimension_x} ${WAVE_sensor_dimension_y} ${WAVE_sensor_dimension_z}" />
+      </geometry>
+    </visual>
+  </link>
+  <joint name="wave_sensor_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="wave_sensor_link" />
+    <origin xyz="${wave_position_x} ${wave_position_y} ${wave_position_z}"
+      rpy="${wave_orientation_r} ${wave_orientation_p} ${wave_orientation_y}" />
+  </joint>
+
+  <!-- Camera  -->
+  <link name="camera_link">
+    <visual>
+      <geometry>
+        <box
+          size="${CAMERA_dimension_x} ${CAMERA_dimension_y} ${CAMERA_dimension_z}" />
+      </geometry>
+    </visual>
+  </link>
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="camera_link" />
+    <origin xyz="${camera_position_x} ${camera_position_y} ${camera_position_z}"
+      rpy="${camera_orientation_r} ${camera_orientation_p} ${camera_orientation_y}" />
+  </joint>
+
+</robot>

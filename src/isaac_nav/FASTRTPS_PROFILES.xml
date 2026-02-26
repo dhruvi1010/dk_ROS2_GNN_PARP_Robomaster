@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+  
+  <!-- Define a profile for participants (nodes) -->
+  <participant profile_name="fastdds_participant" is_default_profile="true">
+    <domainId>0</domainId> <!-- Set your domain ID -->
+    
+    <!-- Network Configuration -->
+    <rtps>
+      <builtin>
+        <!-- Limit discovery traffic -->
+        <discovery_config>
+          <leaseDuration sec="60" nanosec="0"/>
+          <simpleEDP>
+            <use_PublicationReaderANDSubscriptionWriter>true</use_PublicationReaderANDSubscriptionWriter>
+            <use_PublicationWriterANDSubscriptionReader>true</use_PublicationWriterANDSubscriptionReader>
+          </simpleEDP>
+        </discovery_config>
+      </builtin>
+
+      <useMulticast>true</useMulticast> <!-- Enable multicast for efficiency -->
+      <defaultSendPort>11811</defaultSendPort> <!-- Ensure a proper port -->
+
+      <!-- Transport Configuration -->
+      <userTransports>
+        <transport_descriptor>
+          <transport_id>udp_transport</transport_id>
+          <type>UDPv4</type>
+          <sendBufferSize>25165824</sendBufferSize>  <!-- 24MB send buffer -->
+          <receiveBufferSize>25165824</receiveBufferSize>  <!-- 24MB receive buffer -->
+          <maxMessageSize>22000000</maxMessageSize>  <!-- 22MB max message size -->
+        </transport_descriptor>
+      </userTransports>
+      
+      <useBuiltinTransports>false</useBuiltinTransports>  <!-- Disable default transport -->
+      <transportDescriptors>
+        <transport_id>udp_transport</transport_id>
+      </transportDescriptors>
+    </rtps>
+  </participant>
+
+  <!-- Define a default QoS profile for all data writers -->
+  <publisher profile_name="fastdds_publisher" is_default_profile="true">
+    <qos>
+      <durability>
+        <kind>TRANSIENT_LOCAL</kind>
+      </durability>
+      <reliability>
+        <kind>RELIABLE</kind>
+      </reliability>
+      <history>
+        <kind>KEEP_LAST</kind>
+        <depth>10</depth> <!-- Store last 10 messages -->
+      </history>
+      <resource_limits>
+        <max_samples>50</max_samples>
+        <allocated_samples>20</allocated_samples>
+      </resource_limits>
+    </qos>
+  </publisher>
+
+  <!-- Define a default QoS profile for all data readers -->
+  <subscriber profile_name="fastdds_subscriber" is_default_profile="true">
+    <qos>
+      <durability>
+        <kind>TRANSIENT_LOCAL</kind>
+      </durability>
+      <reliability>
+        <kind>RELIABLE</kind>
+      </reliability>
+      <history>
+        <kind>KEEP_LAST</kind>
+        <depth>10</depth>
+      </history>
+      <resource_limits>
+        <max_samples>50</max_samples>
+        <allocated_samples>20</allocated_samples>
+      </resource_limits>
+    </qos>
+  </subscriber>
+
+</profiles>

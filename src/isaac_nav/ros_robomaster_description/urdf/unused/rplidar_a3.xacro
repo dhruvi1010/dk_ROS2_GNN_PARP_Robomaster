@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<robot name="robomaster" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Position of the RPLidar A3 Lidar -->
+  <xacro:property name="RPLidar_A3_Position_x" value="0.116" /> <!-- in m   -->
+  <xacro:property name="RPLidar_A3_Position_y" value="0.0" /> <!-- in m   -->
+  <xacro:property name="RPLidar_A3_Position_z" value="0.11" /> <!-- in m   -->
+  <xacro:property name="RPLidar_A3_Orientation_r" value="0.0" /> <!-- in rad   -->
+  <xacro:property name="RPLidar_A3_Orientation_p" value="0.0" /> <!-- in rad  -->
+  <xacro:property name="RPLidar_A3_Orientation_y" value="${M_PI}" /> <!-- in rad   -->  <!-- Rotation around z Axis   -->
+
+  <!-- Dimension RPLidar A3 -->
+  <xacro:property name="RPLidar_A3_dimension_x" value="0.05" />
+  <xacro:property name="RPLidar_A3_dimension_y" value="0.05" />
+  <xacro:property name="RPLidar_A3_dimension_z" value="0.03" />
+
+  <!-- RpLidar A3-->
+  <link name="RPLidar_A3_link">
+    <visual>
+      <geometry>
+        <mesh
+          filename="file://$(find ros_robomaster_description)/urdf/meshes/lidar/Rplidar.dae"
+          scale="1 1 1 " />
+      </geometry>
+    </visual>
+  </link>
+  <joint
+    name="RPLidar_A3_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="RPLidar_A3_link" />
+    <origin xyz="${RPLidar_A3_Position_x} ${RPLidar_A3_Position_y} ${RPLidar_A3_Position_z}"
+      rpy="${RPLidar_A3_Orientation_r} ${RPLidar_A3_Orientation_p} ${RPLidar_A3_Orientation_y}" />
+  </joint>
+
+  <!-- Gazebo plugin -->
+  <!-- Front RPLIdar  -->
+  <gazebo reference="RPLidar_A3_link">
+    <robotNamespace>/robomaster</robotNamespace>
+    <sensor type="ray" name="RPLidar_A3_link">
+
+      <visualize>true</visualize>
+      <update_rate>12</update_rate>  <!-- Lidar Frequenz-->
+      <origin xyz="0 0 0" rpy="0 0 0" />
+
+      <ray>
+        <scan>
+          <horizontal> <!-- Einlagenscanner-->
+            <samples>2100</samples>
+            <resolution>1</resolution>
+            <min_angle>${0.35 * M_PI}</min_angle>
+            <max_angle>${1.65 * M_PI}</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.05</min>
+          <max>30.0</max>
+          <resolution>0.03</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <!-- Noise parameters based on published spec for Hokuyo laser
+               achieving "+-30mm" accuracy at range < 10m.  A mean of 0.0m and
+               stddev of 0.01m will put 99.7% of samples within 0.03m of the true
+               reading. -->
+          <mean>0.0</mean>
+          <stddev>0.0166</stddev>
+        </noise>
+      </ray>
+      <!-- <plugin name="gazebo_ros_head_hokuyo_controller" filename="libgazebo_ros_laser.so">
+        <topicName>/scan</topicName>
+        <frameName>RPLidar_A3_link</frameName>
+      </plugin> -->
+      <plugin name="scan" filename="libgazebo_ros_ray_sensor.so">
+        <ros>
+          <remapping>~/out:=scan</remapping>
+        </ros>
+        <output_type>sensor_msgs/LaserScan</output_type>
+        <frame_name>RPLidar_A3_link</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+
+</robot>
