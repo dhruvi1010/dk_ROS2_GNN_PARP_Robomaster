@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>nav2_comms_risk_layer</name>
+  <version>0.0.0</version>
+  <description>Costmap layer that paints cost from 5G/Wi-Fi link stats (RSRP, jitter, loss).</description>
+  <maintainer email="dhruvikoshiya1010@gmail.com">dhruvi koshiya</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>nav2_costmap_2d</depend>
+  <depend>pluginlib</depend>
+  <depend>tf2_ros</depend>
+  <depend>perception_aware_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>perception_aware_nav2_msgs</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <nav2_costmap_2d plugin="${prefix}/plugin.xml"/>
+  </export>
+</package>
