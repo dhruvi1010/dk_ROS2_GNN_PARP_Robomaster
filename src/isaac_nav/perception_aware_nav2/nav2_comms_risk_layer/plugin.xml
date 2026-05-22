@@ -1,0 +1,11 @@
+<library path="nav2_comms_risk_layer">
+  <class name="nav2_comms_risk_layer::CommsRiskLayer"
+         type="nav2_comms_risk_layer::CommsRiskLayer"
+         base_class_type="nav2_costmap_2d::Layer">
+    <description>
+      Paints cost into the global costmap based on measured RSRP / jitter / loss
+      from a perception_aware_msgs/LinkStats topic.  Maintains a per-cell radio
+      map with EMA updates at the robot's current pose.
+    </description>
+  </class>
+</library>

@@ -1,0 +1,11 @@
+<library path="nav2_o11y_risk_layer">
+  <class name="nav2_o11y_risk_layer::O11yRiskLayer"
+         type="nav2_o11y_risk_layer::O11yRiskLayer"
+         base_class_type="nav2_costmap_2d::Layer">
+    <description>
+      Paints soft cost into the global costmap based on GNN tracked polygons:
+      risk_k = a_uncertainty * (1 - confidence_k) + b_fragility * max(contributor_ratios_k).
+      Halo decays radially from each polygon centroid; never overwrites LETHAL/INSCRIBED.
+    </description>
+  </class>
+</library>

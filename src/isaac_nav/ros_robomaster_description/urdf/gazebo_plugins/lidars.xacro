@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+
+   <!-- Front RPLIdar  -->
+  <gazebo reference="laser_link">
+    <robotNamespace>/robomaster</robotNamespace>  
+    <sensor type="ray" name="laser_link">
+    
+      <visualize>true</visualize>
+      <update_rate>12</update_rate>  <!-- Lidar Frequenz-->
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+
+      <ray>
+        <scan>
+          <horizontal> <!-- Einlagenscanner-->
+            <samples>1200</samples>
+            <resolution>1</resolution>
+            <min_angle>${1.35 * M_PI}</min_angle>
+            <max_angle>${2.65 * M_PI}</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.05</min>
+          <max>30.0</max>
+          <resolution>0.03</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <!-- Noise parameters based on published spec for Hokuyo laser
+               achieving "+-30mm" accuracy at range < 10m.  A mean of 0.0m and
+               stddev of 0.01m will put 99.7% of samples within 0.03m of the true
+               reading. -->
+          <mean>0.0</mean>
+          <stddev>0.0166</stddev>
+        </noise>
+      </ray>
+      <!-- <plugin name="gazebo_ros_head_hokuyo_controller" filename="libgazebo_ros_laser.so">
+        <topicName>/scan</topicName>
+        <frameName>RPLidar_S2_link</frameName>
+      </plugin> -->
+      <plugin name="scan" filename="libgazebo_ros_ray_sensor.so">
+        <ros>
+          <remapping>~/out:=scan</remapping>
+        </ros>
+        <output_type>sensor_msgs/LaserScan</output_type>
+        <frame_name>laser_link</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+ 
+</robot>
