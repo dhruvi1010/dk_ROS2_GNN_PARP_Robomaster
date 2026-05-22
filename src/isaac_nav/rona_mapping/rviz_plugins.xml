@@ -1,8 +1,0 @@
-<library path="rona_mapping_rviz_plugin">
-  <class 
-    name="rona_mapping::SlamToolboxPlugin" 
-    type="rona_mapping::SlamToolboxPlugin" 
-    base_class_type="rviz_common::Panel">
-    <description> Panel to assist in Mapping and SLAM with the rona_mapping </description>
-  </class>
-</library>
