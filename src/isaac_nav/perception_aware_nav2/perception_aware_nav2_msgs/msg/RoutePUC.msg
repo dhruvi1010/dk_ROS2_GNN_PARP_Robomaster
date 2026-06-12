@@ -1,0 +1,9 @@
+std_msgs/Header header
+string robot_id
+string trial_id
+float64 puc
+float64 w_t
+float64 w_o
+float64 w_c
+float64 w_s
+float64 w_e

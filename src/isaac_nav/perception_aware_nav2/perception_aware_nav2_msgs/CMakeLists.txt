@@ -12,6 +12,9 @@ find_package(std_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
 "msg/LinkStats.msg"
+"msg/RouteCost.msg"
+"msg/RoutePUC.msg"
+"msg/RoutePUCComponents.msg"
 DEPENDENCIES std_msgs
 )
 

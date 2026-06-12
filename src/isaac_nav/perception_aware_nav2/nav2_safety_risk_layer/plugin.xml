@@ -1,0 +1,12 @@
+<library path="nav2_safety_risk_layer">
+  <class name="nav2_safety_risk_layer::SafetyRiskLayer"
+         type="nav2_safety_risk_layer::SafetyRiskLayer"
+         base_class_type="nav2_costmap_2d::Layer">
+    <description>
+      Paints predicted-trajectory soft cost into the global costmap for
+      dynamic-label tracked polygons. Centroid history feeds finite-diff
+      velocity; halos are smeared along v_obs·t for t in [0, safety_horizon_s]
+      with cost decaying with the time horizon. Never overwrites LETHAL.
+    </description>
+  </class>
+</library>

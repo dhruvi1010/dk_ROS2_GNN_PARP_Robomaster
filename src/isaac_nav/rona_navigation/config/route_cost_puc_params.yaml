@@ -1,0 +1,55 @@
+/**:
+  ros__parameters:
+    # I/O  (relative names → /rm03/... under the launch namespace)
+    plan_topic: "/rm03/plan"                 # absolute: NavfnPlanner output (see Lf3_Lf4 §2.1)
+    polygons_topic: "/tracked_polygons"      # absolute: single global publisher
+    link_stats_topic: "comms/link_stats"     # relative → /rm03/comms/link_stats
+    battery_topic: "battery_state"           # relative → /rm03/battery_state
+    costmap_topic: "global_costmap/costmap"  # relative → /rm03/global_costmap/costmap
+    robot_id: "rm03"
+    trial_id: ""                             # overridden by launch arg per trial
+
+    # Time / reliability  (controller defaults confirmed from o11y_parp yaml)
+    v_ref_mps: 0.6                           # = FollowPath.max_vel_x
+    k_slowdown: 0.01
+    resample_ds_m: 0.10                      # 2x costmap resolution (0.05 m)
+    t_sla_s: 30.0
+    sigma_T_per_meter: 0.05
+    sigma_T_per_ms_jitter: 0.01
+
+    # Energy  (percentage field is trustable SoC — Lf3_Lf4 §2.3)
+    use_battery_topic: true
+    energy_alpha_per_m: 1.0
+    energy_beta_per_turn: 0.5
+    battery_capacity_wh: 0.0                 # 0 → energy observational; set ~30.0 to enable as cost
+    energy_reserve_wh: 2.0
+    energy_scale_wh: 5.0
+    turn_threshold_rad: 0.20
+
+    # Day-2 terms (declared now so the file is stable)
+    tube_radius_m: 1.0
+    obs_a_uncertainty: 1.0
+    obs_b_fragility: 0.7
+    obs_decay_tau_m: 0.8
+    rsrp_min_dbm: -85.0
+    rsrp_scale_db: 10.0
+    jitter_max_ms: 30.0
+    jitter_scale_ms: 15.0
+    safety_horizon_s: 3.0
+    safety_dt_s: 0.1
+    dynamic_labels: [2, 4]                   # 2=Robot, 4=Forklift (ints! see Lf3_Lf4 §2.5)
+    safety_g_min_s: 1.0
+    safety_scale_s: 0.4
+
+    # J(pi) weights
+    lambda_obs: 1.0
+    lambda_comms: 1.0
+    lambda_safety: 2.0
+    lambda_energy: 0.0                       # 0 until battery_capacity_wh set
+
+    # PUC fusion weights
+    w_t: 1.0
+    w_o: 1.0
+    w_c: 1.0
+    w_s: 2.0
+    w_e: 0.5

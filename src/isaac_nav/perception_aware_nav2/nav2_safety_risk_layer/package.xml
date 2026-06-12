@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>nav2_safety_risk_layer</name>
+  <version>0.1.0</version>
+  <description>Costmap layer that paints predicted crossing zones from dynamic GNN tracked polygons (Robot/Forklift). Smear of decaying halos along v_obs·t for t in [0,H].</description>
+  <maintainer email="dhruvikoshiya1010@gmail.com">dhruvi koshiya</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>nav2_costmap_2d</depend>
+  <depend>pluginlib</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>gnn_interfaces</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <nav2_costmap_2d plugin="${prefix}/plugin.xml"/>
+  </export>
+</package>

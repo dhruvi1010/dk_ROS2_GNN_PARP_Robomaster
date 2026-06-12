@@ -1,0 +1,16 @@
+std_msgs/Header header
+string robot_id
+string trial_id
+float64 j_total
+float64 time_term
+float64 obs_term
+float64 comms_term
+float64 safety_term
+float64 energy_term
+float64 lambda_obs
+float64 lambda_comms
+float64 lambda_safety
+float64 lambda_energy
+float64 path_length_m
+float64 nominal_speed_mps
+float64 soc_fraction
