@@ -30,7 +30,7 @@ def _make_rosbag_action(context, *args, **kwargs):
     if record not in ('true', '1', 'yes'):
         return []  # bag recording disabled
 
-    run_id_val   = LaunchConfiguration('run_id').perform(context)
+    bag_name_val = LaunchConfiguration('test_bag_name').perform(context)
     bags_dir_val = LaunchConfiguration('bags_dir').perform(context)
     prefix_val   = LaunchConfiguration('prefix').perform(context)
 
@@ -39,7 +39,7 @@ def _make_rosbag_action(context, *args, **kwargs):
     ts_val   = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
     bag_path = os.path.join(bags_dir_val, host_val,
-                            f'{run_id_val}_{ts_val}_bag')
+                            f'{bag_name_val}_{ts_val}_bag')
 
     p = prefix_val  # short alias for readability below
     cmd = [
@@ -58,7 +58,7 @@ def _make_rosbag_action(context, *args, **kwargs):
         f'/{p}/local_costmap/costmap',
         f'/{p}/local_costmap/costmap_raw',
         # 3. perception — RELAYED single-type (NEVER raw /tracked_polygons)
-        '/tracked_polygons_logged',
+        #'/tracked_polygons_logged',
         # 4. comms (L1 evidence) + battery (energy)
         f'/{p}/comms/link_stats',
         f'/{p}/fake_rsrp',
@@ -82,7 +82,7 @@ def _make_rosbag_action(context, *args, **kwargs):
         '/diagnostics',
     ]
 
-    print(f'[rosbag_setup] host={host_val}  ns=/{p}  run={run_id_val}  '
+    print(f'[rosbag_setup] host={host_val}  ns=/{p}  bag={bag_name_val}  '
           f'topics={len(cmd) - 7}  ->  {bag_path}')
     return [ExecuteProcess(cmd=cmd, output='screen')]
 
@@ -165,9 +165,10 @@ def generate_launch_description():
         description='Whether to start RVIZ'
     )
 
-    declare_run_id_cmd = DeclareLaunchArgument(
-        'run_id', default_value='default_run',
-        description='Per-trial id propagated into RouteCost.trial_id and the rosbag dir.')
+    declare_test_bag_name_cmd = DeclareLaunchArgument(
+        'test_bag_name', default_value='default_run',
+        description='Per-trial bag/CSV label; also fed to RouteCost.trial_id. '
+                    'Independent of the 5G inference run_id.')
 
     declare_record_rosbag_cmd = DeclareLaunchArgument(
         'record_rosbag', default_value='false',
@@ -187,7 +188,7 @@ def generate_launch_description():
     autostart = LaunchConfiguration('autostart')
     rviz_config_file = LaunchConfiguration('rviz_config_file')
     use_rviz = LaunchConfiguration('use_rviz')
-    run_id = LaunchConfiguration('run_id')
+    test_bag_name = LaunchConfiguration('test_bag_name')
     record_rosbag = LaunchConfiguration('record_rosbag')
     bags_dir = LaunchConfiguration('bags_dir')
 
@@ -244,14 +245,14 @@ def generate_launch_description():
         name='route_cost_puc',
         output='screen',
         parameters=[rcp_params_file,
-                    {'trial_id': run_id}, {'robot_id': prefix}])
+                    {'trial_id': test_bag_name}, {'robot_id': prefix}])
 
     csv_logger_node = Node(
         package='route_cost_puc_pynode',
         executable='route_cost_csv_logger',
         name='route_cost_csv_logger',
         output='screen',
-        parameters=[{'run_id': run_id},
+        parameters=[{'run_id': test_bag_name},
                     {'output_dir': bags_dir}, {'robot_id': prefix}])
 
     # =========================
@@ -318,7 +319,7 @@ def generate_launch_description():
     for c in (declare_prefix_cmd, declare_use_sim_time_cmd, declare_params_file_cmd,
               declare_rcp_params_cmd, declare_bt_xml_cmd, declare_map_yaml_cmd,
               declare_autostart_cmd, declare_rviz_config_file_cmd, declare_use_rviz_cmd,
-              declare_run_id_cmd, declare_record_rosbag_cmd, declare_bags_dir_cmd):
+              declare_test_bag_name_cmd, declare_record_rosbag_cmd, declare_bags_dir_cmd):
         ld.add_action(c)
     ld.add_action(rviz_cmd)
     ld.add_action(bringup_cmd_group)

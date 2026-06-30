@@ -171,19 +171,19 @@ defaults to `default`, so always pass it). Replace `#` with the robot number.
 enter_cuvslam
 source /workspaces/isaac_ros-dev/install/setup.bash
 
-# L1 only
+# L1 = comms layer only
 ros2 launch rona_navigation parp_bringup_launch.py                  prefix:=rm04
 
-# L1 + L2  
+# L1 + L2  = comms + observation layer
 ros2 launch rona_navigation o11y_parp_bringup_launch.py             prefix:=rm04
 
-# L1 + L2 + L3  (layers only)
+# L1 + L2 + L3  = comms + observation + safety layer
 ros2 launch rona_navigation safety_parp_bringup_launch.py           prefix:=rm04
 
 # Full PARP: L1+L2+L3 + route-cost + CSV + rosbag 
 ros2 launch rona_navigation safety_route_cost_puc_parp_bringup_launch.py \
     prefix:=rm04 \
-    run_id:=rm04_$(date -u +%Y%m%d_%H%M%S) \
+    test_bag_name:=rm03_$(date -u +%Y%m%d_%H%M%S) \
     record_rosbag:=true
 ```
 

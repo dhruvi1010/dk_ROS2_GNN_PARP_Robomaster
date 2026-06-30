@@ -38,7 +38,7 @@ A few words you'll keep seeing:
 | **nav2** | The standard robot navigation "brain" (planning + driving). |
 | **L1 / L2 / L3** | The three custom PARP perception-risk layers stacked on nav2. See the rule of thumb below. |
 | **Relay** | A tiny helper that copies one topic to another so it can be recorded cleanly (explained in §3.4). |
-| **`run_id`** | A label *you* choose for a trial, e.g. `all_layer_rm03_rm04`. It becomes part of the folder name. |
+| **`test_bag_name`** | A label *you* choose for a trial, e.g. `all_layer_rm03_rm04`. It becomes part of the bag/CSV folder name (and fills `RouteCost.trial_id`). On the catch-all recorder it's the positional name argument. **Not** the 5G `inference_node` `run_id`. |
 
 ### Rule of thumb — the three PARP layers
 
@@ -54,12 +54,12 @@ Read them **bottom-up** the stack. Each layer scores a different kind of risk:
 > Spell it **C-O-S** (Comms → Observability → Safety) going up the stack.
 > **"All layers"** means **L1 + L2 + L3** are active together.
 
-### `run_id` naming convention
+### `test_bag_name` naming convention
 
-Name a trial after *which layers* and *which robots* it covers — the `run_id`
+Name a trial after *which layers* and *which robots* it covers — the `test_bag_name`
 becomes part of the folder name, so keep it short and descriptive:
 
-| Example `run_id` | Meaning |
+| Example `test_bag_name` | Meaning |
 |---|---|
 | `all_layer_rm03_rm04` | all three layers on, robots **rm03 + rm04** |
 | `all_layer_all_robot` | all three layers on, **every robot** |
@@ -85,11 +85,12 @@ launch file; three live in this `dk_ros2_bags/` folder and are smaller helpers.
 |---|---|---|---|
 | 1 | [safety_route_cost_puc_parp_bringup_launch.py](../robo_flw_dk/ROS2_GNN_Robomaster/src/isaac_nav/rona_navigation/launch/rviz/safety_route_cost_puc_parp_bringup_launch.py) | **All-layers trial**: start the *whole* robot stack with **L1 + L2 + L3** + record a bag + write a CSV, all in one command. | ✅ Yes |
 | 2 | [relay_tracked_polygons.py](../dk_ros2_bags/relay_tracked_polygons.py) | **L3 sub-test recorder**: capture a short 30–60 s window *while the stack is already running*. Relay + recorder in one. | ✅ Yes |
-| 3 | [bag_record_all.launch.py](../dk_ros2_bags/bag_record_all.launch.py) | **Catch-all**: dump *every visible topic* for debugging a weird event. | ✅ Yes |
+| 3 | [bag_record_all.py](../dk_ros2_bags/bag_record_all.py) | **Catch-all**: dump *every visible topic* for debugging a weird event. | ✅ Yes |
 | 4 | [tracked_polygons_relay_node.py](../dk_ros2_bags/tracked_polygons_relay_node.py) | **Relay only**: a plumbing helper. Copies one tricky topic so it *can* be recorded. Records nothing itself. | ❌ No |
 
-> **Naming note:** the cheat sheets sometimes call file #3 `bag_record_all_launch.py`.
-> The real file on disk is **`bag_record_all.launch.py`** (note the dot). Use the real name.
+> **Naming note:** older cheat sheets call file #3 `bag_record_all_launch.py` /
+> `bag_record_all.launch.py` and start it with `ros2 launch`. It is now a plain
+> Python script — **`bag_record_all.py`** — run it with `python3` (see §3.3).
 
 ---
 
@@ -133,8 +134,8 @@ records it:
 
 **WHERE it lands:**
 
-- Bag: `/workspaces/isaac_ros-dev/dk_ros2_bags/<host>/<run_id>_<timestamp>_bag/`
-- CSV: `/workspaces/isaac_ros-dev/dk_ros2_bags/<host>/<run_id>_<timestamp>.csv`
+- Bag: `/workspaces/isaac_ros-dev/dk_ros2_bags/<host>/<test_bag_name>_<timestamp>_bag/`
+- CSV: `/workspaces/isaac_ros-dev/dk_ros2_bags/<host>/<test_bag_name>_<timestamp>.csv`
 
 (`<host>` is the robot name, e.g. `rm03`. See §4 for the host-vs-container path twist.)
 
@@ -143,11 +144,11 @@ records it:
 ```bash
 # Record an all-layers trial:
 ros2 launch rona_navigation safety_route_cost_puc_parp_bringup_launch.py \
-    run_id:=all_layer_rm03_rm04 record_rosbag:=true
+    test_bag_name:=all_layer_rm03_rm04 record_rosbag:=true
 
 # Run the stack but DON'T record (CSV still written):
 ros2 launch rona_navigation safety_route_cost_puc_parp_bringup_launch.py \
-    run_id:=all_layer_rm03_rm04
+    test_bag_name:=all_layer_rm03_rm04
 
 # Drive the robot to its goal, then press Ctrl-C once to stop & store the bag.
 ```
@@ -176,14 +177,14 @@ Ctrl-C once and it cleanly closes both the relay and the bag.
 
 **WHERE it lands:**
 `/workspaces/isaac_ros-dev/dk_ros2_bags/L3_real_<sub>_<timestamp>_bag/`
-where `<sub>` is the sub-test name you pass (defaults to `R1`).
+where `<sub>` is the sub-test name you pass (defaults to `Scenario_1`).
 
 **HOW to run it:**
 
 ```bash
 cd /workspaces/isaac_ros-dev
-python3 dk_ros2_bags/relay_tracked_polygons.py sub_test_R2
-# (no argument → defaults to sub-test "R1")
+python3 dk_ros2_bags/relay_tracked_polygons.py Scenario_1
+# (no argument → defaults to sub-test "Scenario_1")
 # Drive the short maneuver, then Ctrl-C to save.
 ```
 
@@ -193,36 +194,37 @@ whole stack each time. This script makes each capture a one-liner.
 
 ---
 
-### 3.3 `bag_record_all.launch.py` — the catch-all "record everything"
+### 3.3 `bag_record_all.py` — the catch-all "record everything"
 
-**File:** [dk_ros2_bags/bag_record_all.launch.py](../dk_ros2_bags/bag_record_all.launch.py)
+**File:** [dk_ros2_bags/bag_record_all.py](../dk_ros2_bags/bag_record_all.py)
 
 **WHAT it does:** Records **every topic currently visible** on the system (the `-a`
 "all" flag), into one MCAP bag. It does **not** start the robot stack and it does
 **not** start the relay.
 
 **WHERE it lands:**
-`/workspaces/isaac_ros-dev/dk_ros2_bags/<run_id>_<timestamp>_bag/`
+`/workspaces/isaac_ros-dev/dk_ros2_bags/<test_bag_name>_<timestamp>_bag/`
 — a **flat folder, no per-host sub-folder** (this differs from the all-layers trial,
-which nests under `<host>/`). Default `run_id` is `rm03`.
+which nests under `<host>/`). Default name is `$ROBOT` or the hostname (e.g. `rm03`).
 
-**HOW to run it** (note: you must `cd` into the folder and use the `./` prefix — this
-folder is *not* a ROS package, so the `ros2 launch <package>` form will not work):
+**HOW to run it** (it's a plain Python script — run it with `python3`, either from
+inside the folder or via its full path; the name is a **positional** argument and
+`--bag-dir` / `--storage` are flags):
 
 ```bash
-# This recorder file can be use in for multiple purpose, just pass the aruguments
+# This recorder can be used for multiple purposes — just pass the arguments.
 
 cd /workspaces/isaac_ros-dev/dk_ros2_bags
-ros2 launch ./bag_record_all.launch.py
+python3 bag_record_all.py
 
 # Give it a custom label:
-ros2 launch ./bag_record_all.launch.py run_id:=scenario_1
+python3 bag_record_all.py scenario_1
 
 # Use the older sqlite3 format instead of MCAP:
-ros2 launch ./bag_record_all.launch.py storage:=sqlite3
+python3 bag_record_all.py --storage sqlite3
 
 # Send it to a different output folder:
-ros2 launch ./bag_record_all.launch.py bag_dir:=/tmp/triage run_id:=quick_test
+python3 bag_record_all.py quick_test --bag-dir /tmp/triage
 ```
 
 **WHY it exists:** When something strange happens and you don't yet know *which* topic
@@ -276,9 +278,9 @@ doorways (a "bind-mount"):
 
 Folder-name patterns:
 
-- **All-layers trials:** `dk_ros2_bags/<host>/<run_id>_<timestamp>_bag/` + a `.csv` beside it.
+- **All-layers trials:** `dk_ros2_bags/<host>/<test_bag_name>_<timestamp>_bag/` + a `.csv` beside it.
 - **L3 sub-test:** `dk_ros2_bags/L3_real_<sub>_<timestamp>_bag/`.
-- **Catch-all:** `dk_ros2_bags/<run_id>_<timestamp>_bag/` (flat, no host sub-folder).
+- **Catch-all:** `dk_ros2_bags/<test_bag_name>_<timestamp>_bag/` (flat, no host sub-folder).
 
 ---
 
@@ -292,7 +294,7 @@ Do you want to start a fresh, scripted experiment trial?
 └─ No — the stack is already running.
    │
    ├─ I want a short L3 sub-test window  → §3.2  relay_tracked_polygons.py
-   ├─ Something weird happened, grab     → §3.3  bag_record_all.launch.py
+   ├─ Something weird happened, grab     → §3.3  bag_record_all.py
    │  EVERYTHING                            (+ §3.4 relay if you need polygons)
    └─ I only need the polygon relay      → §3.4  tracked_polygons_relay_node.py
 ```
@@ -306,7 +308,7 @@ Do you want to start a fresh, scripted experiment trial?
 ```bash
 # Terminal 1 — one command does it all:
 ros2 launch rona_navigation safety_route_cost_puc_parp_bringup_launch.py \
-    run_id:=all_layer_rm03_rm04 record_rosbag:=true
+    test_bag_name:=all_layer_rm03_rm04 record_rosbag:=true
 # Drive to the goal, then Ctrl-C. Bag + CSV land in dk_ros2_bags/<host>/all_layer_rm03_rm04_<ts>_*
 ```
 
@@ -315,7 +317,7 @@ ros2 launch rona_navigation safety_route_cost_puc_parp_bringup_launch.py \
 ```bash
 # Terminal 1 — stack only (no bag):
 ros2 launch rona_navigation safety_route_cost_puc_parp_bringup_launch.py \
-    run_id:=all_layer_rm03
+    test_bag_name:=all_layer_rm03
 
 # Terminal 2 — sub-test 1:
 cd /workspaces/isaac_ros-dev
@@ -330,14 +332,14 @@ python3 dk_ros2_bags/relay_tracked_polygons.py S2_again # Ctrl-C to save
 
 ```bash
 # Terminal 1 — stack:
-ros2 launch rona_navigation safety_route_cost_puc_parp_bringup_launch.py run_id:=triage
+ros2 launch rona_navigation safety_route_cost_puc_parp_bringup_launch.py test_bag_name:=triage
 
 # Terminal 2 — relay (catch-all does NOT bundle it):
 python3 /workspaces/isaac_ros-dev/dk_ros2_bags/tracked_polygons_relay_node.py
 
 # Terminal 3 — record everything:
 cd /workspaces/isaac_ros-dev/dk_ros2_bags
-ros2 launch ./bag_record_all.launch.py run_id:=triage_session
+python3 bag_record_all.py triage_session
 ```
 
 ---
@@ -346,10 +348,10 @@ ros2 launch ./bag_record_all.launch.py run_id:=triage_session
 
 ```bash
 # All-layers trial (nested under host):
-ros2 bag info /workspaces/isaac_ros-dev/dk_ros2_bags/<host>/<run_id>_<ts>_bag
+ros2 bag info /workspaces/isaac_ros-dev/dk_ros2_bags/<host>/<test_bag_name>_<ts>_bag
 
 # Catch-all (flat folder):
-ros2 bag info /workspaces/isaac_ros-dev/dk_ros2_bags/<run_id>_<ts>_bag
+ros2 bag info /workspaces/isaac_ros-dev/dk_ros2_bags/<test_bag_name>_<ts>_bag
 ```
 
 A healthy recording shows:
@@ -366,7 +368,7 @@ A healthy recording shows:
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `ros2 launch ./bag_record_all.launch.py` says "package not found" | You used the package-style form, but this folder isn't a package. | `cd` into `dk_ros2_bags` first and keep the `./` prefix. |
+| `python3 bag_record_all.py` → "No such file or directory" | You're not in `dk_ros2_bags/`, or used the wrong name. | `cd` into `dk_ros2_bags` first, or give the full path `python3 /workspaces/isaac_ros-dev/dk_ros2_bags/bag_record_all.py`. |
 | Bag has `/tracked_polygons` with **0 messages** | The dual-type problem — recorded the raw topic without the relay. | Use the all-layers launch or the L3 sub-test recorder (both relay automatically), or start §3.4 manually. |
 | `ros2 bag info` says "path does not exist" | You used the host path `/home/robot_3/...` while inside the container. | Use the container path `/workspaces/isaac_ros-dev/...`. |
 | No `.csv` next to the bag | CSV logger only runs with the all-layers launch, not the L3 sub-test or catch-all. | Expected — only the all-layers launch writes CSVs. |
@@ -378,10 +380,10 @@ A healthy recording shows:
 
 To record a real experiment trial, run **one** launch command —
 `safety_route_cost_puc_parp_bringup_launch.py` (all layers on: **L1 Communication +
-L2 Observability + L3 Safety**) — adding `run_id:=<your_label> record_rosbag:=true`,
+L2 Observability + L3 Safety**) — adding `test_bag_name:=<your_label> record_rosbag:=true`,
 then drive to the goal and press Ctrl-C. The result is an MCAP bag plus a CSV under
 `dk_ros2_bags/<robot>/<your_label>_<timestamp>_*`. For short follow-up captures on a
 running stack use `relay_tracked_polygons.py`; for blind "record everything" debugging
-use `bag_record_all.launch.py` (plus the `tracked_polygons_relay_node.py` helper if you
+use `bag_record_all.py` (plus the `tracked_polygons_relay_node.py` helper if you
 need obstacle polygons). The relay exists purely to turn one confusing dual-type topic
 into a clean single-type one that recorders can capture.
