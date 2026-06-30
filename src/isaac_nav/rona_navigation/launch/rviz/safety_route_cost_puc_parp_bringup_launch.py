@@ -57,8 +57,9 @@ def _make_rosbag_action(context, *args, **kwargs):
         f'/{p}/global_costmap/costmap_updates',
         f'/{p}/local_costmap/costmap',
         f'/{p}/local_costmap/costmap_raw',
-        # 3. perception — RELAYED single-type (NEVER raw /tracked_polygons)
-        #'/tracked_polygons_logged',
+        # 3. perception — RAW /tracked_polygons (single-type now that the rviz
+        #    Polygon/PolygonStamped display was removed; no relay involved).
+        #'/tracked_polygons',
         # 4. comms (L1 evidence) + battery (energy)
         f'/{p}/comms/link_stats',
         f'/{p}/fake_rsrp',
@@ -189,7 +190,6 @@ def generate_launch_description():
     rviz_config_file = LaunchConfiguration('rviz_config_file')
     use_rviz = LaunchConfiguration('use_rviz')
     test_bag_name = LaunchConfiguration('test_bag_name')
-    record_rosbag = LaunchConfiguration('record_rosbag')
     bags_dir = LaunchConfiguration('bags_dir')
 
     # =========================
@@ -294,18 +294,14 @@ def generate_launch_description():
         csv_logger_node,      # CSV Logger for Route Cost / PUC data
     ])
 
-    # ---------- optional rosbag relay + recorder ----------
+    # ---------- optional rosbag recorder ----------
     #
-    # Relay dual-type /tracked_polygons -> single-type /tracked_polygons_logged
-    # so rosbag2 can record it. (Source is dual-type because foreign rviz subs
-    # advertise PolygonStamped — intentional, not cleanable.) Runs only when
-    # recording is enabled.
-    relay_cmd = ExecuteProcess(
-        condition=IfCondition(record_rosbag),
-        cmd=['python3',
-             '/workspaces/isaac_ros-dev/dk_ros2_bags/tracked_polygons_relay_node.py'],
-        output='screen')
-
+    # NO relay here. /tracked_polygons is recorded RAW. This is safe because the
+    # rviz Polygon display (which advertised geometry_msgs/PolygonStamped and made
+    # the topic dual-type) was removed, so /tracked_polygons is now single-type
+    # gnn_interfaces/TrackedPolygon. Nothing publishes /tracked_polygons_logged.
+    # The separate PARP_Recorder keeps the relay as a fallback for dirty networks.
+    #
     # The rosbag recorder is built lazily by an OpaqueFunction so all
     # LaunchConfigurations resolve to plain strings before the cmd list is
     # constructed. See _make_rosbag_action() at the top of this file.
@@ -323,6 +319,5 @@ def generate_launch_description():
         ld.add_action(c)
     ld.add_action(rviz_cmd)
     ld.add_action(bringup_cmd_group)
-    ld.add_action(relay_cmd)
     ld.add_action(rosbag_cmd)
     return ld

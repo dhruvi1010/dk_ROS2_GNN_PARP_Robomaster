@@ -253,7 +253,8 @@ class RouteCostPucNode(Node):
         return float(sum_rho_c), float(p_c)
 
     def compute_safety_term(self, rx, ry, ryaw, seg_ds, now_sec):
-        if len(rx) < 2: return 0.0, 1.0
+        # returns (rho_s, p_s, min_ttc_s); min_ttc_s = -1.0 when no closing threat.
+        if len(rx) < 2: return 0.0, 1.0, -1.0
         cum_t = [0.0]
         mids_x = 0.5 * (rx[:-1] + rx[1:])
         mids_y = 0.5 * (ry[:-1] + ry[1:])
@@ -263,7 +264,7 @@ class RouteCostPucNode(Node):
             cum_t.append(cum_t[-1] + ds / v)
         dyn = set(self.dynamic_labels)
         dyn_tracks = [tr for tr in self.poly_tracker.active() if tr['label'] in dyn]
-        if not dyn_tracks: return 0.0, 1.0
+        if not dyn_tracks: return 0.0, 1.0, -1.0
 
         H = self.safety_horizon_s
         gap_min = float('inf')
@@ -286,11 +287,11 @@ class RouteCostPucNode(Node):
                 if closing <= 1e-3: continue
                 ttc = d / closing
                 if ttc < gap_min: gap_min = ttc
-        if gap_min == float('inf'): return 0.0, 1.0
+        if gap_min == float('inf'): return 0.0, 1.0, -1.0
         p_s = sigmoid((gap_min - self.safety_g_min_s) / max(1e-3, self.safety_scale_s))
         eps = 1e-6
         rho_s = -math.log(p_s + eps)
-        return float(rho_s), float(p_s)
+        return float(rho_s), float(p_s), float(gap_min)
     
     # ---------- main compute ----------
     def on_plan(self, msg: Path):
@@ -342,7 +343,18 @@ class RouteCostPucNode(Node):
         # -----new  obs/comms/safety stubs  -----
         obs_term, p_o = self.compute_obs_term(rx, ry, seg_ds)
         comms_term, p_c = self.compute_comms_term(path_len)
-        safety_term, p_s = self.compute_safety_term(rx, ry, ryaw, seg_ds, now_sec)
+        safety_term, p_s, min_ttc_s = self.compute_safety_term(rx, ry, ryaw, seg_ds, now_sec)
+
+        # ----- term-driving inputs (for self-sufficient logging / training) -----
+        tracks = self.poly_tracker.active()
+        n_obstacles = len(tracks)
+        if tracks:
+            nearest_obstacle_m = min(
+                float(np.min(np.hypot(rx - tr['cx'], ry - tr['cy']))) for tr in tracks)
+        else:
+            nearest_obstacle_m = -1.0
+        rsrp_for_msg = self.rsrp_dbm if self.rsrp_dbm is not None else float('nan')
+        jitter_for_msg = self.jitter_ms if self.jitter_ms is not None else float('nan')
 
         j_total = (time_term
                    + self.lam_o * obs_term
@@ -378,6 +390,11 @@ class RouteCostPucNode(Node):
         rc.path_length_m = path_len
         rc.nominal_speed_mps = self.v_ref
         rc.soc_fraction = self.soc
+        rc.n_obstacles = n_obstacles
+        rc.nearest_obstacle_m = nearest_obstacle_m
+        rc.rsrp_dbm = rsrp_for_msg
+        rc.jitter_ms = jitter_for_msg
+        rc.min_ttc_s = min_ttc_s
         self.pub_cost.publish(rc)
 
         comp = RoutePUCComponents()

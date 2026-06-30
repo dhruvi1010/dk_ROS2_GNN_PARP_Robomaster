@@ -26,6 +26,7 @@ class RouteCostCsvLogger(Node):
         'lambda_obs', 'lambda_comms', 'lambda_safety', 'lambda_energy',
         'puc', 'p_t', 'p_o', 'p_c', 'p_s', 'p_e',
         'w_t', 'w_o', 'w_c', 'w_s', 'w_e',
+        'n_obstacles', 'nearest_obstacle_m', 'rsrp_dbm', 'jitter_ms', 'min_ttc_s',
     ]
 
     def __init__(self):
@@ -84,6 +85,8 @@ class RouteCostCsvLogger(Node):
             puc.w_t if puc else '', puc.w_o if puc else '',
             puc.w_c if puc else '', puc.w_s if puc else '',
             puc.w_e if puc else '',
+            msg.n_obstacles, msg.nearest_obstacle_m, msg.rsrp_dbm,
+            msg.jitter_ms, msg.min_ttc_s,
         ]
         self._w.writerow(row)
         self._f.flush()

@@ -1,69 +1,57 @@
-# PARP Data Recording — Plain-English README
+# PARP Data Recording: Plain-English README
 
-**To whom this is for:** anyone — developer or non developer — who needs to *record robot data*
-during a PARP experiment, find the recorded files afterwards, or understand what
-each script in this folder actually does.
+**Who this is for:** anyone (developer or non-developer) who needs to *record robot
+data* during a PARP experiment, find the recorded files afterwards, or understand what
+each script does.
 
-This README explains, for every recording-related file:
-
-- **WHAT** it records (which data),
-- **WHERE** the recording lands (which folder),
-- **HOW** to run it (copy-paste commands), and
-- **WHY** it exists (what problem it solves).
-
+For every recording tool this README explains **WHAT** it records, **WHERE** the files
+land, **HOW** to run it, and **WHY** it exists.
 
 ---
 
 ## 1. The 90-second background (read this first)
 
-The robot is a **RoboMaster** named **`rm03`**. While it drives around, dozens of
-little data streams flow through the system — its position, its plan, its 
-detected obstacles, its radio signal strength, and so on. In ROS 2 (the robot's
-operating-system layer) each stream is called a **topic** (think: a labelled pipe
-of live data).
+The robot is a **RoboMaster** (e.g. `rm03`, `rm04`, `cr01`). While it drives, dozens of
+little data streams flow through the system: its position, its plan, detected
+obstacles, radio signal strength, and so on. In ROS 2 each stream is a **topic**
+(a labelled pipe of live data).
 
-To analyse an experiment *after* it happened, we **record** these topics into a
-file called a **rosbag** (a "black box flight recorder" for the robot). We can
-replay a rosbag later, or run analysis scripts on it.
-
-A few words you'll keep seeing:
+To analyse a trial *afterwards* we **record** topics into a **rosbag** (the robot's
+"black-box flight recorder"). Alongside the bag we also write a **CSV**, a light,
+spreadsheet-ready table of the PARP cost metrics, one row per planner cycle.
 
 | Word | Plain meaning |
 |---|---|
-| **Topic** | A named live data stream, e.g. `/rm03/plan` (the robot's planned path). |
-| **rosbag / bag** | The recorded file holding those streams. Our bags use the **MCAP** format. |
-| **MCAP** | A modern, efficient bag file format (the default here). `sqlite3` is the older alternative. |
-| **CSV** | A spreadsheet-friendly table. A second, lighter log written *next to* each bag for quick analysis. |
-| **Container** | A sealed software box (called **cuvslam**) the robot's code runs inside. You enter it with `enter_cuvslam`. |
+| **Topic** | A named live data stream, e.g. `/rm03/plan` (the planned path). |
+| **rosbag / bag** | The recorded file holding those streams. Ours use the **MCAP** format. |
+| **CSV** | A spreadsheet of the PARP metrics, written *next to* each bag for quick analysis & model training. |
+| **Container** | The sealed software box (**cuvslam**) the robot's code runs in. Enter it with `enter_cuvslam`. |
 | **nav2** | The standard robot navigation "brain" (planning + driving). |
-| **L1 / L2 / L3** | The three custom PARP perception-risk layers stacked on nav2. See the rule of thumb below. |
-| **Relay** | A tiny helper that copies one topic to another so it can be recorded cleanly (explained in §3.4). |
-| **`test_bag_name`** | A label *you* choose for a trial, e.g. `all_layer_rm03_rm04`. It becomes part of the bag/CSV folder name (and fills `RouteCost.trial_id`). On the catch-all recorder it's the positional name argument. **Not** the 5G `inference_node` `run_id`. |
+| **L1 / L2 / L3** | The three PARP perception-risk layers stacked on nav2 (see below). |
+| **Relay** | A tiny helper that copies one topic to a clean one so it records reliably (see §3.3). |
+| **`test_bag_name`** | The label *you* choose for a trial, e.g. `all_layer_rm03_rm04`. It names the bag/CSV folder and fills `RouteCost.trial_id`. |
+| **namespace / `<host>`** | The `/rm03` prefix on a robot's topics. Auto-derived from `$ROBOT` → hostname. |
 
-### Rule of thumb — the three PARP layers
+### The three PARP layers (rule of thumb)
 
-Read them **bottom-up** the stack. Each layer scores a different kind of risk:
-
-| Layer | Full name (ROS package) | What it scores | One word |
-|---|---|---|---|
-| **L1** | **Communication risk** (`nav2_comms_risk_layer`) | radio-link quality / connectivity | **comms** |
-| **L2** | **Observability risk** (`nav2_o11y_risk_layer`) | how well the robot can sense / see | **see** |
-| **L3** | **Safety** (`nav2_safety_risk_layer`) | protective safety halo along the planned path | **safe** |
+| Layer | Scores | One word |
+|---|---|---|
+| **L1** Communication risk | radio-link quality / connectivity | **comms** |
+| **L2** Observability risk | how well the robot can sense / see | **see** |
+| **L3** Safety | protective halo along the planned path | **safe** |
 
 > **Mnemonic:** *"Can I talk → can I see → am I safe?"* = L1 → L2 → L3.
-> Spell it **C-O-S** (Comms → Observability → Safety) going up the stack.
-> **"All layers"** means **L1 + L2 + L3** are active together.
+> **"All layers"** = L1 + L2 + L3 active together.
 
-### `test_bag_name` naming convention
+### `test_bag_name` convention
 
-Name a trial after *which layers* and *which robots* it covers — the `test_bag_name`
-becomes part of the folder name, so keep it short and descriptive:
+Name a trial after *which layers* and *which robots* it covers:
 
-| Example `test_bag_name` | Meaning |
+| Example | Meaning |
 |---|---|
-| `all_layer_rm03_rm04` | all three layers on, robots **rm03 + rm04** |
-| `all_layer_all_robot` | all three layers on, **every robot** |
-| `all_layer_rm03` | all three layers on, **single robot rm03** |
+| `all_layer_rm03_rm04` | all three layers on, robots rm03 + rm04 |
+| `all_layer_all_robot` | all three layers on, every robot |
+| `S1_diagonal` | a named scenario/ablation |
 
 **Golden rule before *any* command below:**
 
@@ -72,295 +60,224 @@ enter_cuvslam              # step inside the container
 source install/setup.bash  # make the robot's commands available
 ```
 
-Every command in this README assumes you have done those two lines first.
+---
+
+## 2. The map: which tool does what
+
+There are **two** recording tools you use day to day, plus one plumbing helper.
+
+| # | Tool | One-line job | Bag | CSV |
+|---|---|---|---|---|
+| 1 | [safety_route_cost_puc_parp_bringup_launch.py](../rona_navigation/launch/rviz/safety_route_cost_puc_parp_bringup_launch.py) | **All-layers trial**: start the whole stack (L1+L2+L3) **and** record, in one command. | ✅ | ✅ |
+| 2 | [PARP_bag_csv_recorder.py](../PARP_Recorder/PARP_bag_csv_recorder.py) | **Separate recorder**: record on top of an already-running stack; relay + bag + CSV + modem_link in one process. | ✅ | ✅ |
+| 3 | `tracked_polygons_relay_node.py` (in `dk_ros2_bags/`) | **Relay only**: copies one tricky topic so it records cleanly. Records nothing itself. | ❌ | ❌ |
+
+> Both tools now write the **same 34-column CSV** (see §4) and use the **same
+> `test_bag_name`** naming. Tool 1 is the everyday button; tool 2 is the portable,
+> robust fallback you run by hand.
 
 ---
 
-## 2. The map — which file does what
+## 3. Each tool in detail
 
-There are **four** recording-related code files. One is the everyday "big button"
-launch file; three live in this `dk_ros2_bags/` folder and are smaller helpers.
+### 3.1 `safety_route_cost_puc_parp_bringup_launch.py`: the all-layers "everything on" button
 
-| # | File | One-line job | Records data? |
-|---|---|---|---|
-| 1 | [safety_route_cost_puc_parp_bringup_launch.py](../robo_flw_dk/ROS2_GNN_Robomaster/src/isaac_nav/rona_navigation/launch/rviz/safety_route_cost_puc_parp_bringup_launch.py) | **All-layers trial**: start the *whole* robot stack with **L1 + L2 + L3** + record a bag + write a CSV, all in one command. | ✅ Yes |
-| 2 | [relay_tracked_polygons.py](../dk_ros2_bags/relay_tracked_polygons.py) | **L3 sub-test recorder**: capture a short 30–60 s window *while the stack is already running*. Relay + recorder in one. | ✅ Yes |
-| 3 | [bag_record_all.py](../dk_ros2_bags/bag_record_all.py) | **Catch-all**: dump *every visible topic* for debugging a weird event. | ✅ Yes |
-| 4 | [tracked_polygons_relay_node.py](../dk_ros2_bags/tracked_polygons_relay_node.py) | **Relay only**: a plumbing helper. Copies one tricky topic so it *can* be recorded. Records nothing itself. | ❌ No |
+**File:** [../rona_navigation/launch/rviz/safety_route_cost_puc_parp_bringup_launch.py](../rona_navigation/launch/rviz/safety_route_cost_puc_parp_bringup_launch.py)
 
-> **Naming note:** older cheat sheets call file #3 `bag_record_all_launch.py` /
-> `bag_record_all.launch.py` and start it with `ros2 launch`. It is now a plain
-> Python script — **`bag_record_all.py`** — run it with `python3` (see §3.3).
-
----
-
-## 3. Each file in detail
-
-### 3.1 `safety_route_cost_puc_parp_bringup_launch.py` — the all-layers "everything on" button
-
-**File:** [robo_flw_dk/.../safety_route_cost_puc_parp_bringup_launch.py](../robo_flw_dk/ROS2_GNN_Robomaster/src/isaac_nav/rona_navigation/launch/rviz/safety_route_cost_puc_parp_bringup_launch.py)
-
-**WHAT it does:** One command brings up the *complete* robot brain and (optionally)
+**WHAT it does:** one command brings up the *complete* robot brain and (optionally)
 records it:
 
 - nav2 navigation stack,
-- all three PARP layers — **L1 (Communication risk) + L2 (Observability risk) + L3
-  (Safety)** — by loading the `safety_parp_gnn_robomaster_nav2_radar.yaml` parameter file,
-- the `route_cost_puc` node (computes route cost + PUC, the thesis metrics),
-- a **CSV logger** that writes those metrics to a spreadsheet,
-- a **relay** helper (only when recording — see §3.4),
-- a **rosbag recorder** capturing the trial's key topics.
+- all three PARP layers (**L1 + L2 + L3**) via `safety_parp_gnn_robomaster_nav2_radar.yaml`,
+- the `route_cost_puc` node (computes route cost J(π) + PUC, the thesis metrics),
+- a **CSV logger** (`route_cost_csv_logger`) writing the 34-column metrics table,
+- a **rosbag recorder** capturing ~27 key topics.
 
-**WHAT it records (the ~18 key topics):**
+**WHAT it records (the ~27 topics):** plans (`plan`, `local_plan`,
+`transformed_global_plan`, `received_global_plan`), costmaps (global/local + raw +
+updates), comms + energy (`comms/link_stats`, `fake_rsrp`, `battery_state`), the PARP
+core (`route_cost`, `route_puc`, `route_puc_components`), pose/actuation (`odom`,
+`odom_vicon`, `vicon_pose`, `cmd_vel`, `cmd_wheel_speed`, `scan_filtered`), and
+`tf`, `tf_static`, `behavior_tree_log`, `navigate_to_pose/feedback|result`, `diagnostics`.
 
-```
-/rm03/plan                       the global planned path
-/rm03/local_plan                 the short-range path
-/rm03/global_costmap/costmap     the map of "where it's costly to drive"
-/rm03/global_costmap/costmap_raw
-/rm03/local_costmap/costmap
-/tracked_polygons_logged         camera/GNN-detected obstacle shapes (via relay)
-/rm03/comms/link_stats           radio link quality
-/rm03/battery_state              battery
-/rm03/route_cost                 PARP metric: route cost
-/rm03/route_puc                  PARP metric: PUC
-/rm03/route_puc_components       PARP metric: PUC breakdown
-/rm03/odom                       robot's own position estimate
-/rm03/vicon_pose                 ground-truth position (motion-capture)
-/tf, /tf_static                  coordinate-frame transforms
-/navigate_to_pose/feedback       progress toward the goal
-/navigate_to_pose/result         did it reach the goal
-```
+> **Perception note (important):** the launch is set up to record **raw
+> `/tracked_polygons`** directly. This is safe now that the redundant rviz Polygon
+> display was removed (see §3.3). At the moment that line is **commented out** (per
+> supervisor preference), so the launch bag currently contains **no** polygon topic.
+> To include it, un-comment `'/tracked_polygons'` in the recorder's topic list. The
+> obstacle data still flows to `route_cost` either way, so `n_obstacles` / `obs_term`
+> in the CSV are unaffected.
 
 **WHERE it lands:**
-
-- Bag: `/workspaces/isaac_ros-dev/dk_ros2_bags/<host>/<test_bag_name>_<timestamp>_bag/`
-- CSV: `/workspaces/isaac_ros-dev/dk_ros2_bags/<host>/<test_bag_name>_<timestamp>.csv`
-
-(`<host>` is the robot name, e.g. `rm03`. See §4 for the host-vs-container path twist.)
+- Bag: `/workspaces/isaac_ros-dev/dk_ros2_bags/<host>/<test_bag_name>_<ts>_bag/`
+- CSV: `/workspaces/isaac_ros-dev/dk_ros2_bags/<host>/<test_bag_name>_<ts>.csv`
 
 **HOW to run it:**
-
 ```bash
-# Record an all-layers trial:
+# Record an all-layers trial (bag + CSV):
 ros2 launch rona_navigation safety_route_cost_puc_parp_bringup_launch.py \
     test_bag_name:=all_layer_rm03_rm04 record_rosbag:=true
 
-# Run the stack but DON'T record (CSV still written):
+# Run the stack but DON'T record a bag (the CSV is still written):
 ros2 launch rona_navigation safety_route_cost_puc_parp_bringup_launch.py \
     test_bag_name:=all_layer_rm03_rm04
 
-# Drive the robot to its goal, then press Ctrl-C once to stop & store the bag.
+# Drive to the goal, then Ctrl-C once to finalise.
 ```
 
-**WHY it exists:** This is the main data-collection tool for the **all-layers
-condition** (L1 + L2 + L3 on). One command = one reproducible, fully-captured trial.
+**WHY it exists:** the main data-collection tool for an all-layers trial: one command,
+one reproducible, fully-captured run.
 
 ---
 
-### 3.2 `relay_tracked_polygons.py` — the L3 sub-test mini-recorder
+### 3.2 `PARP_bag_csv_recorder.py`: the separate, portable recorder (with relay fallback)
 
-**File:** [dk_ros2_bags/relay_tracked_polygons.py](../dk_ros2_bags/relay_tracked_polygons.py)
+**File:** [../PARP_Recorder/PARP_bag_csv_recorder.py](../PARP_Recorder/PARP_bag_csv_recorder.py)
 
-**WHAT it does:** A small Python script that does **two jobs in one process**:
+**WHAT it does:** a single self-contained process doing three jobs (one Ctrl-C stops all):
+1. **Relay**: republishes `/tracked_polygons` → `/tracked_polygons_logged` (single-type),
+   so polygons record cleanly **even if a stray rviz still dirties the bus** (the fallback).
+2. **Bag**: `ros2 bag record -s mcap` of ~29 curated topics (incl. `/tracked_polygons_logged`
+   and `/<host>/modem_link`).
+3. **CSV**: the same 34-column metrics table as the launch (§4).
 
-1. runs the polygon relay (§3.4) internally, and
-2. immediately starts `ros2 bag record` on a fixed list of ~19 topics.
+You run it **on top of an already-running stack**: it does *not* start nav2.
 
-You run it **on top of an already-running stack** — you do *not* restart nav2. Press
-Ctrl-C once and it cleanly closes both the relay and the bag.
+**Portable to any robot:** namespace and output paths auto-derive from `$ROBOT` →
+hostname (rm03, rm04, cr01, flw, …). Per-robot topics get the `/<host>/` prefix;
+host-independent ones (`/tf`, `/navigate_to_pose/*`, the relayed polygons) stay global.
 
-**WHAT it records:** A curated L3 topic set defined in the script's `TOPICS` list —
-`/tracked_polygons_logged`, both costmaps + raw, global/local/transformed plans,
-`odom`, `odom_vicon`, `vicon_pose`, `comms/link_stats`, `fake_rsrp`, `cmd_vel`,
-`scan_filtered`, `tf`, `tf_static`, and the navigate-to-pose feedback/result.
+**WHERE it lands:** `/workspaces/isaac_ros-dev/dk_ros2_bags/<host>/<label>_<ts>_bag/`
+plus `…/<label>_<ts>.csv` (bag and CSV share the same `<label>_<ts>` stem).
 
-**WHERE it lands:**
-`/workspaces/isaac_ros-dev/dk_ros2_bags/L3_real_<sub>_<timestamp>_bag/`
-where `<sub>` is the sub-test name you pass (defaults to `Scenario_1`).
-
-**HOW to run it:**
-
+**HOW to run it** (naming works exactly like the launch's `test_bag_name:=`):
 ```bash
 cd /workspaces/isaac_ros-dev
-python3 dk_ros2_bags/relay_tracked_polygons.py Scenario_1
-# (no argument → defaults to sub-test "Scenario_1")
-# Drive the short maneuver, then Ctrl-C to save.
+
+python3 PARP_Recorder/PARP_bag_csv_recorder.py test_bag_name:=S1_diagonal   # launch-style name
+python3 PARP_Recorder/PARP_bag_csv_recorder.py S1_diagonal                  # bare positional also works
+python3 PARP_Recorder/PARP_bag_csv_recorder.py                             # → "default_run"
 ```
 
-**WHY it exists:** During the L3 (Safety) acceptance tests (R1–R9), you want to capture
-many short 30–60 second windows back-to-back **without** tearing down and rebuilding the
-whole stack each time. This script makes each capture a one-liner.
+> Don't also pass `record_rosbag:=true` to the launch while running this: you'd get
+> two relays and two bags. Bring the stack up *without* recording, then run this.
+
+**WHY it exists:** the robust fallback. When you want polygons guaranteed clean
+regardless of network hygiene, or you need an extra capture on a stack that's already
+up, this is the tool. It also adds `/<host>/modem_link` (the modem link topic), which
+the launch bag does not.
 
 ---
 
-### 3.3 `bag_record_all.py` — the catch-all "record everything"
+### 3.3 The polygon dual-type story, the relay, and the rviz fix
 
-**File:** [dk_ros2_bags/bag_record_all.py](../dk_ros2_bags/bag_record_all.py)
+`/tracked_polygons` was historically **dual-type**: the GNN publishes it as
+`gnn_interfaces/TrackedPolygon`, but an rviz **Polygon display** *subscribed* to it as
+`geometry_msgs/PolygonStamped`. That confused `ros2 topic echo` and `ros2 bag record`
+(0 / wrong-type captures). Your own typed code was never affected.
 
-**WHAT it does:** Records **every topic currently visible** on the system (the `-a`
-"all" flag), into one MCAP bag. It does **not** start the robot stack and it does
-**not** start the relay.
+**Two fixes are now in place:**
+- **Root cause removed:** the redundant rviz Polygon display on `/tracked_polygons` was
+  deleted (the correct `MarkerArray` on `/tracked_polygon_markers` does the
+  visualization). With no `PolygonStamped` subscriber, `/tracked_polygons` is now
+  single-type, so the **launch records it raw**. *(Takes effect once every rviz is
+  restarted with the fixed config.)*
+- **Fallback kept:** `PARP_bag_csv_recorder.py` still relays to
+  `/tracked_polygons_logged`, so it stays safe even if a stray old-config rviz reappears.
 
-**WHERE it lands:**
-`/workspaces/isaac_ros-dev/dk_ros2_bags/<test_bag_name>_<timestamp>_bag/`
-— a **flat folder, no per-host sub-folder** (this differs from the all-layers trial,
-which nests under `<host>/`). Default name is `$ROBOT` or the hostname (e.g. `rm03`).
-
-**HOW to run it** (it's a plain Python script — run it with `python3`, either from
-inside the folder or via its full path; the name is a **positional** argument and
-`--bag-dir` / `--storage` are flags):
-
-```bash
-# This recorder can be used for multiple purposes — just pass the arguments.
-
-cd /workspaces/isaac_ros-dev/dk_ros2_bags
-python3 bag_record_all.py
-
-# Give it a custom label:
-python3 bag_record_all.py scenario_1
-
-# Use the older sqlite3 format instead of MCAP:
-python3 bag_record_all.py --storage sqlite3
-
-# Send it to a different output folder:
-python3 bag_record_all.py quick_test --bag-dir /tmp/triage
-```
-
-**WHY it exists:** When something strange happens and you don't yet know *which* topic
-holds the clue, record them *all* and sort it out later. It's a debugging/triage net,
-not a tidy experiment recorder. Because it doesn't include the relay, start the relay
-separately (§3.4) if you need the obstacle polygons.
-
----
-
-### 3.4 `tracked_polygons_relay_node.py` — the relay (plumbing only)
-
-**File:** [dk_ros2_bags/tracked_polygons_relay_node.py](../dk_ros2_bags/tracked_polygons_relay_node.py)
-
-**WHAT it does:** Copies messages from `/tracked_polygons` to a new topic
-`/tracked_polygons_logged`. **It records nothing** — it's pure plumbing.
-
-**WHERE it lands:** Nowhere on disk. It just publishes the cleaned-up topic onto the
-live system so a recorder can pick it up.
-
-**HOW to run it** (only needed as a side-helper for catch-all recording):
-
+The standalone relay helper `tracked_polygons_relay_node.py` (in the container's
+`dk_ros2_bags/`) is only needed if you ever want to publish for   `/tracked_polygons_logged`
+by hand for 'route_cost_puc_parp_bringup_launch.py':
 ```bash
 python3 /workspaces/isaac_ros-dev/dk_ros2_bags/tracked_polygons_relay_node.py
 ```
 
-**WHY it exists (the interesting bit):** The `/tracked_polygons` topic is *dual-type* —
-the GNN obstacle detector publishes it as `gnn_interfaces/TrackedPolygon`, but foreign
-RViz viewer subscribers also advertise it as `geometry_msgs/PolygonStamped`. When
-`ros2 bag record` sees one topic with two different message types, it gets confused and
-records **zero messages, or the wrong type**. The relay republishes *only* the correct
-type onto a brand-new, single-type topic (`/tracked_polygons_logged`) that records
-cleanly. The all-layers launch and the L3 sub-test recorder start this relay for you
-automatically; the catch-all does not.
+---
+
+
+> ⚠️ **One-time build** so the columns fill with data (the message gained fields):
+> ```bash
+> cd /workspaces/isaac_ros-dev
+> colcon build --packages-select perception_aware_nav2_msgs && source install/setup.bash
+> colcon build --packages-select route_cost_puc_pynode && source install/setup.bash
+> ```
+> Run on every robot that publishes, logs, echoes, or replays `RouteCost`.
 
 ---
 
-## 4. Where do the files actually go? (the path twist)
+## 4. Where do the files go? (the path twist)
 
-You run everything **inside the cuvslam container**, but the files are physically
-stored on the **host** machine. They are the same files seen through two different
-doorways (a "bind-mount"):
+You run inside the container, but files live on the host (a bind-mount: same files,
+two doorways):
 
 | Where you are | Path you use |
 |---|---|
-| **Inside the container** (after `enter_cuvslam`) | `/workspaces/isaac_ros-dev/dk_ros2_bags/...` |
-| **On the host** (a normal terminal on the robot) | `/home/robot_3/isaac_ros-dev/dk_ros2_bags/...` |
+| **Inside the container** (`enter_cuvslam`) | `/workspaces/isaac_ros-dev/dk_ros2_bags/...` |
+| **On the host** | `/home/robot_3/isaac_ros-dev/dk_ros2_bags/...` |
 
-> The host path `/home/robot_3/...` **does not exist inside the container**, and
-> `ros2 bag info` only works on the container path while you're inside the container.
-> When in doubt, goldern rule is: first always use the container path.
+> The host path doesn't exist inside the container; `ros2 bag info` only works on the
+> container path while you're inside. When in doubt, use the container path.
 
-Folder-name patterns:
+Folder patterns (both tools): `dk_ros2_bags/<host>/<name>_<ts>_bag/` + `…_<ts>.csv`.
 
-- **All-layers trials:** `dk_ros2_bags/<host>/<test_bag_name>_<timestamp>_bag/` + a `.csv` beside it.
-- **L3 sub-test:** `dk_ros2_bags/L3_real_<sub>_<timestamp>_bag/`.
-- **Catch-all:** `dk_ros2_bags/<test_bag_name>_<timestamp>_bag/` (flat, no host sub-folder).
+> **Namespace gotcha:** the per-robot topics are `/<host>/…` where `<host>` = `$ROBOT`
+> → hostname. The stack and the recorder must resolve to the **same** value, or the
+> recorder/CSV look at the wrong robot and capture nothing. Simplest rule: set each
+> robot's hostname to its id and **don't** export `ROBOT`. Only set `ROBOT` (consistently
+> in every terminal) for deliberate identity-faking.
 
 ---
 
-## 5. "Which one do I run?" — a 10-second decision guide
+## 5. "Which one do I run?" (decision guide)
 
 ```
-Do you want to start a fresh, scripted experiment trial?
-│
-├─ Yes — full stack, all layers (L1+L2+L3)  → §3.1  safety_..._bringup_launch.py
-│
-└─ No — the stack is already running.
-   │
-   ├─ I want a short L3 sub-test window  → §3.2  relay_tracked_polygons.py
-   ├─ Something weird happened, grab     → §3.3  bag_record_all.py
-   │  EVERYTHING                            (+ §3.4 relay if you need polygons)
-   └─ I only need the polygon relay      → §3.4  tracked_polygons_relay_node.py
+Starting a fresh, scripted trial (and want the stack too)?
+├─ Yes  → §3.1  safety_..._bringup_launch.py   (records raw /tracked_polygons; bag + CSV)
+└─ No: the stack is already running, OR I want guaranteed-clean polygons / modem_link
+        → §3.2  PARP_bag_csv_recorder.py        (relay fallback; bag + CSV)
 ```
 
 ---
 
 ## 6. Ready-to-paste recipes
 
-**Recipe A — one full all-layers trial, everything captured (most common):**
-
+**Recipe A: one full all-layers trial (most common):**
 ```bash
-# Terminal 1 — one command does it all:
 ros2 launch rona_navigation safety_route_cost_puc_parp_bringup_launch.py \
     test_bag_name:=all_layer_rm03_rm04 record_rosbag:=true
-# Drive to the goal, then Ctrl-C. Bag + CSV land in dk_ros2_bags/<host>/all_layer_rm03_rm04_<ts>_*
+# Drive to goal, Ctrl-C. → dk_ros2_bags/<host>/all_layer_rm03_rm04_<ts>_bag + .csv
 ```
 
-**Recipe B — bring the stack up once, then capture several L3 sub-tests:**
-
+**Recipe B: stack up once, then record separately (clean-polygon fallback):**
 ```bash
-# Terminal 1 — stack only (no bag):
+# Terminal 1: stack only (no bag):
 ros2 launch rona_navigation safety_route_cost_puc_parp_bringup_launch.py \
-    test_bag_name:=all_layer_rm03
+    test_bag_name:=S1_diagonal
 
-# Terminal 2 — sub-test 1:
+# Terminal 2: separate recorder (relay + bag + CSV + modem_link):
 cd /workspaces/isaac_ros-dev
-python3 dk_ros2_bags/relay_tracked_polygons.py S1        # Ctrl-C to save
-
-# Terminal 2 again — sub-test 2:
-python3 dk_ros2_bags/relay_tracked_polygons.py S2_again # Ctrl-C to save
-# ...repeat per S-test. The stack stays up the whole time.
+python3 PARP_Recorder/PARP_bag_csv_recorder.py test_bag_name:=S1_diagonal
+# Ctrl-C to save.
 ```
 
-**Recipe C — catch-all triage when you don't know what you're hunting:**
-
-```bash
-# Terminal 1 — stack:
-ros2 launch rona_navigation safety_route_cost_puc_parp_bringup_launch.py test_bag_name:=triage
-
-# Terminal 2 — relay (catch-all does NOT bundle it):
-python3 /workspaces/isaac_ros-dev/dk_ros2_bags/tracked_polygons_relay_node.py
-
-# Terminal 3 — record everything:
-cd /workspaces/isaac_ros-dev/dk_ros2_bags
-python3 bag_record_all.py triage_session
-```
+> Use the **same** `test_bag_name` in both so the filenames and the CSV `trial_id`
+> column match (the `trial_id` comes from the running `route_cost` node).
 
 ---
 
-## 7. Did it work? — verify after Ctrl-C
+## 7. Did it work? Verify after Ctrl-C
 
 ```bash
-# All-layers trial (nested under host):
-ros2 bag info /workspaces/isaac_ros-dev/dk_ros2_bags/<host>/<test_bag_name>_<ts>_bag
-
-# Catch-all (flat folder):
-ros2 bag info /workspaces/isaac_ros-dev/dk_ros2_bags/<test_bag_name>_<ts>_bag
+ros2 bag info /workspaces/isaac_ros-dev/dk_ros2_bags/<host>/<name>_<ts>_bag
+head -1 /workspaces/isaac_ros-dev/dk_ros2_bags/<host>/<name>_<ts>.csv   # 34-column header
 ```
 
-A healthy recording shows:
-
-- **`Storage id: mcap`** (the expected format).
-- Roughly **18–25 topics** for an all-layers trial or L3 sub-test, or **50–80** for the catch-all.
-- **`/tracked_polygons_logged`** listed as `gnn_interfaces/msg/TrackedPolygon` with a
-  message count **greater than 0** → confirms the relay was running and obstacle data
-  was captured.
+Healthy signs:
+- `Storage id: mcap`, ~27 topics (launch) / ~29 topics (separate recorder).
+- Polygons present: **either** `/tracked_polygons` (launch, raw) **or**
+  `/tracked_polygons_logged` (recorder, relayed) listed as
+  `gnn_interfaces/msg/TrackedPolygon` with **count > 0**.
+- CSV: `n_obstacles > 0` on some rows ⇒ perception is getting through.
 
 ---
 
@@ -368,22 +285,26 @@ A healthy recording shows:
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `python3 bag_record_all.py` → "No such file or directory" | You're not in `dk_ros2_bags/`, or used the wrong name. | `cd` into `dk_ros2_bags` first, or give the full path `python3 /workspaces/isaac_ros-dev/dk_ros2_bags/bag_record_all.py`. |
-| Bag has `/tracked_polygons` with **0 messages** | The dual-type problem — recorded the raw topic without the relay. | Use the all-layers launch or the L3 sub-test recorder (both relay automatically), or start §3.4 manually. |
-| `ros2 bag info` says "path does not exist" | You used the host path `/home/robot_3/...` while inside the container. | Use the container path `/workspaces/isaac_ros-dev/...`. |
-| No `.csv` next to the bag | CSV logger only runs with the all-layers launch, not the L3 sub-test or catch-all. | Expected — only the all-layers launch writes CSVs. |
-| Commands "not found" | Forgot to source the environment. | Run `enter_cuvslam` then `source install/setup.bash`. |
+| `ros2 topic echo /tracked_polygons` → "more than one type" | A stray rviz still has the old Polygon display | Restart that rviz with the fixed config, or use the relay (recorder). |
+| Bag `/tracked_polygons` has **0 messages** | Dual-type at record time (dirty network), or GNN not publishing | Use `PARP_bag_csv_recorder.py` (relay fallback); confirm `ros2 topic hz /tracked_polygons`. |
+| `obs_term` / `n_obstacles` always 0 | GNN not publishing, polygons not in `map` frame, or none within ~1 m of path | Check `ros2 topic echo /tracked_polygons --field header.frame_id` (must be `map`). |
+| CSV new columns blank or `AttributeError` | `RouteCost.msg` not rebuilt | Run the §4 `colcon build` on that robot. |
+| Recorder/CSV capture nothing per-robot | `$ROBOT` ≠ the stack's namespace | Match `ROBOT` (or hostname) to the namespace the stack uses (see §5). |
+| `ros2 bag info` "path does not exist" | Used host path inside the container | Use the `/workspaces/isaac_ros-dev/...` container path. |
+| Commands "not found" | Env not sourced | `enter_cuvslam` then `source install/setup.bash`. |
 
 ---
 
-## 9. One-paragraph summary for a non-developer reader
+## 9. One-paragraph summary
 
-To record a real experiment trial, run **one** launch command —
-`safety_route_cost_puc_parp_bringup_launch.py` (all layers on: **L1 Communication +
-L2 Observability + L3 Safety**) — adding `test_bag_name:=<your_label> record_rosbag:=true`,
-then drive to the goal and press Ctrl-C. The result is an MCAP bag plus a CSV under
-`dk_ros2_bags/<robot>/<your_label>_<timestamp>_*`. For short follow-up captures on a
-running stack use `relay_tracked_polygons.py`; for blind "record everything" debugging
-use `bag_record_all.py` (plus the `tracked_polygons_relay_node.py` helper if you
-need obstacle polygons). The relay exists purely to turn one confusing dual-type topic
-into a clean single-type one that recorders can capture.
+For a real trial, run **one** launch,
+`safety_route_cost_puc_parp_bringup_launch.py` (all layers: **L1 comms + L2 see + L3
+safe**) with `test_bag_name:=<label> record_rosbag:=true`, then drive to the goal, Ctrl-C.
+You get an MCAP **bag** + a 34-column **CSV** under
+`dk_ros2_bags/<robot>/<label>_<ts>_*`. The launch records **raw** `/tracked_polygons`
+(clean now that the rviz wart is gone). When you need guaranteed-clean polygons, the
+extra `modem_link` topic, or a capture on a stack that's already up, run the separate
+**`PARP_bag_csv_recorder.py`** (same naming, same CSV): it relays
+`/tracked_polygons → /tracked_polygons_logged` as a fallback. Both write identical CSVs;
+the new `n_obstacles / nearest_obstacle_m / rsrp_dbm / jitter_ms / min_ttc_s` columns
+explain *why* each cost term has its value and double as model-training features.
