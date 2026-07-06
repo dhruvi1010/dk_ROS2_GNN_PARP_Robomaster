@@ -76,7 +76,7 @@ def record_topics():
         "global_costmap/costmap_updates",
         "local_costmap/costmap", "local_costmap/costmap_raw",
         # 3. comms (L1) + battery (energy)
-        "comms/link_stats", "fake_rsrp", "modem_link", "battery_state",
+        "comms/link_stats", "fake_rsrp", "battery_state", #"modem_link",
         # 4. route_cost / PUC outputs (dissertation core)
         "route_cost", "route_puc", "route_puc_components",
         # 5. pose / ground truth / actuation

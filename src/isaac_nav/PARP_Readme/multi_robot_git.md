@@ -137,19 +137,41 @@ cd /workspaces/isaac_ros-dev
 source /opt/ros/humble/setup.bash
 
 # 1) messages / interfaces first
-colcon build --packages-select perception_aware_nav2_msgs gnn_interfaces
+colcon build --packages-select perception_aware_msgs perception_aware_nav2_msgs 
 source install/setup.bash
 
-# 2) layers + nodes + bringup
+# 2) GNN packages - optional
+colcon build --packages-select gnn_interfaces
+source install/setup.bash
+
+# 3) layers + nodes + bringup
 colcon build --packages-select \
-  gnn_objects_layer \
   nav2_comms_risk_layer nav2_o11y_risk_layer nav2_safety_risk_layer \
-  comms_monitor_pynode route_cost_puc_pynode \
-  rona_navigation
+  comms_monitor_pynode route_cost_puc_pynode
+source install/setup.bash
+
+# 4) rona navigation - optional
+colcon build --packages-select rona_navigation
+source install/setup.bash
+
+# 5) install comms_modem_monitor - this must be installed outside docker too
+colcon build --packages-select comms_modem_monitor
 source install/setup.bash
 
 ```
-
+To enable passwordless sudo for modem monitor. Create this file:
+```bash
+sudo visudo -f /etc/sudoers.d/mmcli-ros2
+```
+copy this:
+```bash
+Cmnd_Alias MMCLI_AT_METRICS = /usr/bin/mmcli -m * --command=AT+QENG*, /usr/bin/mmcli -m * --command=AT+QRSRQ, /usr/bin/mmcli -m * --command=AT+QRSRP, /usr/bin/mmcli -m * --command=AT+QSINR
+robot_X ALL=(root) NOPASSWD: MMCLI_AT_METRICS
+```
+Then enable:
+```bash
+sudo chmod +x /etc/sudoers.d/mmcli-ros2
+```
 
 ## 3. Per-Robot Configuration
 

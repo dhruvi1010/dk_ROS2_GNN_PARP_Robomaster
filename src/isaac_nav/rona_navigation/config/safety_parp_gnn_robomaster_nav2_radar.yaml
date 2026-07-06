@@ -257,8 +257,8 @@ global_costmap:
         w_jitter: 0.4
         w_loss: 0.0
         k_cost: 120.0
-        inflation_radius_m: 1.2
-        decay_time_s: 30.0
+        inflation_radius_m: 0.4
+        decay_time_s: 10.0
         only_raise: true
       ## ---added o11y risk layer for global costmap
       o11y_risk_layer:
@@ -268,7 +268,7 @@ global_costmap:
         a_uncertainty: 1.0
         b_fragility:   0.7
         k_o11y_cost:   90.0       # peak cost; keep < 200 so inflation_layer still dominates near walls
-        halo_radius_m: 1.0
+        halo_radius_m: 0.75
         match_radius_m: 0.4
         decay_time_s:  20.0
         min_confidence_ignore: 0.0

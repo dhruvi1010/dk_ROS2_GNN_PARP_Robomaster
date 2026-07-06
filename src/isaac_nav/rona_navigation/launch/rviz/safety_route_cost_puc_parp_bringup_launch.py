@@ -42,46 +42,74 @@ def _make_rosbag_action(context, *args, **kwargs):
                             f'{bag_name_val}_{ts_val}_bag')
 
     p = prefix_val  # short alias for readability below
-    cmd = [
-        'ros2', 'bag', 'record',
-        '-o', bag_path,
-        '-s', 'mcap',                       # MCAP, same as bag_record_all.launch.py
+    topics = [
         # 1. plans + path metrics
-        f'/{p}/plan',
-        f'/{p}/local_plan',
-        f'/{p}/transformed_global_plan',
-        f'/{p}/received_global_plan',
-        # 2. costmaps (raw + compressed + updates)
-        f'/{p}/global_costmap/costmap',
-        f'/{p}/global_costmap/costmap_raw',
-        f'/{p}/global_costmap/costmap_updates',
-        f'/{p}/local_costmap/costmap',
-        f'/{p}/local_costmap/costmap_raw',
-        # 3. perception — RAW /tracked_polygons (single-type now that the rviz
-        #    Polygon/PolygonStamped display was removed; no relay involved).
-        #'/tracked_polygons',
-        # 4. comms (L1 evidence) + battery (energy)
-        f'/{p}/comms/link_stats',
-        f'/{p}/fake_rsrp',
-        f'/{p}/battery_state',
-        # 5. route_cost outputs (the dissertation core)
-        f'/{p}/route_cost',
-        f'/{p}/route_puc',
-        f'/{p}/route_puc_components',
-        # 6. pose / ground truth
-        f'/{p}/odom',
-        f'/{p}/odom_vicon',
-        f'/{p}/vicon_pose',
-        f'/{p}/cmd_vel',
-        f'/{p}/cmd_wheel_speed',
-        f'/{p}/scan_filtered',
-        # 7. tf + navigation action
-        '/tf', '/tf_static',
-        f'/{p}/behavior_tree_log',
-        '/navigate_to_pose/feedback',
-        '/navigate_to_pose/result',
-        '/diagnostics',
+        f'/{p}/plan', f'/{p}/local_plan',
+        f'/{p}/transformed_global_plan', f'/{p}/received_global_plan',
+        # 2. costmaps — OccupancyGrid ONLY (RViz2 Map display). raw+updates
+        #    dropped: costmap_raw has no RViz display, and always_send_full_costmap
+        #    makes /costmap a full frame so updates are redundant. ~halves write load.
+        f'/{p}/global_costmap/costmap', f'/{p}/global_costmap/costmap_raw',
+        f'/{p}/local_costmap/costmap', f'/{p}/local_costmap/costmap_raw',
+        # 3. radar pointcloud
+        f'/{p}/ti_mmwave/radar_scan_pcl',
+        # 4. comms (L1) + battery
+        f'/{p}/comms/link_stats', f'/{p}/fake_rsrp', f'/{p}/battery_state',
+        # 5. route_cost core
+        f'/{p}/route_cost', f'/{p}/route_puc', f'/{p}/route_puc_components',
+        # 6. pose / gt / actuation
+        f'/{p}/odom', f'/{p}/vicon_pose', f'/{p}/cmd_vel',
+        f'/{p}/cmd_wheel_speed', f'/{p}/scan_filtered',
+        # 7. tf (GLOBAL, not namespaced) — REQUIRED for RViz playback — + BT log
+        '/tf', '/tf_static', f'/{p}/behavior_tree_log',
+        # --- optional raw grids: numeric analysis only, NOT RViz-viewable ---
+        #f'/{p}/global_costmap/costmap_raw', f'/{p}/local_costmap/costmap_raw',
     ]
+
+    cmd = ['ros2', 'bag', 'record', '-o', bag_path, '-s', 'mcap', *topics]
+    # keep the recorder OFF the RT path so it can't preempt Nav2 / cuVSLAM
+    cmd = ['nice', '-n', '19', 'ionice', '-c', '3', *cmd]
+    # cmd = [
+    #     'ros2', 'bag', 'record',
+    #     '-o', bag_path,
+    #     '-s', 'mcap',                       # MCAP, same as bag_record_all.launch.py
+    #     # 1. plans + path metrics
+    #     f'/{p}/plan',
+    #     f'/{p}/local_plan',
+    #     f'/{p}/transformed_global_plan',
+    #     f'/{p}/received_global_plan',
+    #     # 2. costmaps (raw + compressed + updates)
+    #     f'/{p}/global_costmap/costmap',
+    #     f'/{p}/global_costmap/costmap_raw',
+    #     #f'/{p}/global_costmap/costmap_updates',
+    #     f'/{p}/local_costmap/costmap',
+    #     f'/{p}/local_costmap/costmap_raw',
+    #     # 3. perception — RAW /tracked_polygons (single-type now that the rviz
+    #     #    Polygon/PolygonStamped display was removed; no relay involved).
+    #     f'/{p}/ti_mmwave/radar_scan_pcl',
+    #     #'/tracked_polygons',
+    #     # 4. comms (L1 evidence) + battery (energy)
+    #     f'/{p}/comms/link_stats',
+    #     f'/{p}/fake_rsrp',
+    #     f'/{p}/battery_state',
+    #     # 5. route_cost outputs (the dissertation core)
+    #     f'/{p}/route_cost',
+    #     f'/{p}/route_puc',
+    #     f'/{p}/route_puc_components',
+    #     # 6. pose / ground truth
+    #     f'/{p}/odom',
+    #     #f'/{p}/odom_vicon',
+    #     f'/{p}/vicon_pose',
+    #     f'/{p}/cmd_vel',
+    #     f'/{p}/cmd_wheel_speed',
+    #     f'/{p}/scan_filtered',
+    #     # 7. tf + navigation action
+    #     #'/tf', '/tf_static',
+    #     f'/{p}/behavior_tree_log',
+    #     # '/navigate_to_pose/feedback',
+    #     # '/navigate_to_pose/result',
+    #     # '/diagnostics',
+    # ]
 
     print(f'[rosbag_setup] host={host_val}  ns=/{p}  bag={bag_name_val}  '
           f'topics={len(cmd) - 7}  ->  {bag_path}')
